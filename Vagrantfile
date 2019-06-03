@@ -9,7 +9,7 @@ CHEF_SERVER_IP = '192.168.2.200'
 CHEF_NODE_IP = '192.168.2.201'
 CHEF_AUTOMATE_HOSTNAME = 'chef-automate.test'
 CHEF_SERVER_HOSTNAME = 'chef-server.test'
-CHEF_NODE_HOSTNAME = 'chef-node'
+CHEF_NODE_HOSTNAME = 'chef-node.test'
 CHEF_AUTOMATE_ZIP_URL = 'https://packages.chef.io/files/current/automate/latest/chef-automate_linux_amd64.zip'
 CHEF_SERVER_ZIP_URL = 'https://packages.chef.io/files/stable/chef-server/12.19.31/ubuntu/18.04/chef-server-core_12.19.31-1_amd64.deb'
 
@@ -41,6 +41,8 @@ Vagrant.configure("2") do |rootconfig|
       curl #{CHEF_SERVER_ZIP_URL} --output chef-server-core.deb
       sudo dpkg -i chef-server-core.deb
       sudo chef-server-ctl reconfigure
+      echo "Waiting for running services: HealthCheck OK"
+      until (curl -D - http://localhost:8000/_status) | grep "200 OK"; do sleep 15s; done
       sudo chef-server-ctl user-create admin admin admin admin@admin.com password --filename /etc/chef/admin.pem
       sudo chef-server-ctl org-create default_organization "Default Organization" --association_user admin --filename /etc/chef/validator.pem
       sudo chef-server-ctl install chef-manage
@@ -57,6 +59,7 @@ Vagrant.configure("2") do |rootconfig|
       echo "data_collector['root_url'] = 'https://#{CHEF_AUTOMATE_HOSTNAME}/data-collector/v0/'" | sudo tee -a /etc/opscode/chef-server.rb
       echo "data_collector['proxy'] = true" | sudo tee -a /etc/opscode/chef-server.rb
       echo "profiles['root_url'] = 'https://#{CHEF_AUTOMATE_HOSTNAME}'" | sudo tee -a /etc/opscode/chef-server.rb
+      echo "opscode_erchef['max_request_size'] = 20000000" | sudo tee -a /etc/opscode/chef-server.rb 
       sudo chef-server-ctl reconfigure
       # BOOTSTRAP DEL NODO CHEF (INSTALLAZIONE DI KNIFE)
       curl -L https://omnitruck.chef.io/install.sh | sudo bash
